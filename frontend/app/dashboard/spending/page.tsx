@@ -187,19 +187,19 @@ export default function SpendingPage() {
   const [days, setDays] = useState(30);
   const [isYtd, setIsYtd] = useState(false);
   const [isAllTime, setIsAllTime] = useState(false);
-  const [incomeRefreshKey, setIncomeRefreshKey] = useState(0);
-  const refreshIncome = useCallback(() => setIncomeRefreshKey(k => k + 1), []);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const refreshAll = useCallback(() => setRefreshKey(k => k + 1), []);
 
   const activeDays = isAllTime ? 0 : isYtd ? ytdDays() : days;
 
   const { data, isLoading } = useSWR<SpendingData>(
-    `/api/spending?days=${activeDays}`,
-    apiFetcher,
+    [`/api/spending?days=${activeDays}`, refreshKey],
+    ([k]) => apiFetcher(k),
     { keepPreviousData: true, refreshInterval: 30000, revalidateOnFocus: true }
   );
 
   const { data: incomeData } = useSWR<IncomeData>(
-    [`/api/income?days=${activeDays}`, incomeRefreshKey],
+    [`/api/income?days=${activeDays}`, refreshKey],
     ([k]) => apiFetcher(k),
     { keepPreviousData: true }
   );
@@ -426,59 +426,60 @@ export default function SpendingPage() {
             </table>
           </div>
 
-          {/* Income section */}
-          <div className="rounded-2xl bg-white border card-base overflow-hidden">
-            <div className="px-5 py-3.5 border-b bg-emerald-50/60 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-emerald-800">Income</h2>
-                <p className="text-xs text-emerald-600 mt-0.5">
-                  {formatCurrency(incomeTotal)} {isYtd ? "year to date" : isAllTime ? "all time" : `last ${days} days`}
-                </p>
-              </div>
-              {Array.isArray(accounts) && accounts.length > 0 && (
-                <AddIncomeModal accounts={accounts} onSuccess={refreshIncome} />
-              )}
-            </div>
-            {incomeEntries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
-                <p className="text-sm text-muted-foreground">No income recorded for this period.</p>
-                {Array.isArray(accounts) && accounts.length > 0 && (
-                  <p className="text-xs text-muted-foreground">Use "Add Income" to log a paycheck, freelance payment, or deposit.</p>
-                )}
-              </div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-xs text-muted-foreground">
-                    <th className="px-5 py-3 text-left font-medium">Date</th>
-                    <th className="px-5 py-3 text-left font-medium">Source</th>
-                    <th className="px-5 py-3 text-left font-medium hidden md:table-cell">Account</th>
-                    <th className="px-5 py-3 text-right font-medium">Amount</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {incomeEntries.map(entry => (
-                    <tr key={entry.id} className="hover:bg-emerald-50/40 transition-colors">
-                      <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(entry.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                      </td>
-                      <td className="px-5 py-3">
-                        <p className="font-medium truncate max-w-[200px]">{entry.merchant_name ?? entry.name}</p>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-muted-foreground hidden md:table-cell truncate max-w-[120px]">
-                        {entry.account_name}
-                      </td>
-                      <td className="px-5 py-3 text-right font-semibold tabular-nums text-emerald-600">
-                        +{formatCurrency(Math.abs(entry.amount))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
         </>
       )}
+
+      {/* Income section — always visible regardless of spending data */}
+      <div className="rounded-2xl bg-white border card-base overflow-hidden">
+        <div className="px-5 py-3.5 border-b bg-emerald-50/60 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-emerald-800">Income</h2>
+            <p className="text-xs text-emerald-600 mt-0.5">
+              {formatCurrency(incomeTotal)} {isYtd ? "year to date" : isAllTime ? "all time" : `last ${days} days`}
+            </p>
+          </div>
+          {Array.isArray(accounts) && accounts.length > 0 && (
+            <AddIncomeModal accounts={accounts} onSuccess={refreshAll} />
+          )}
+        </div>
+        {incomeEntries.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-2 text-center px-4">
+            <p className="text-sm text-muted-foreground">No income recorded for this period.</p>
+            {Array.isArray(accounts) && accounts.length > 0 && (
+              <p className="text-xs text-muted-foreground">Use "Add Income" to log a paycheck, freelance payment, or deposit.</p>
+            )}
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-xs text-muted-foreground">
+                <th className="px-5 py-3 text-left font-medium">Date</th>
+                <th className="px-5 py-3 text-left font-medium">Source</th>
+                <th className="px-5 py-3 text-left font-medium hidden md:table-cell">Account</th>
+                <th className="px-5 py-3 text-right font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {incomeEntries.map(entry => (
+                <tr key={entry.id} className="hover:bg-emerald-50/40 transition-colors">
+                  <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                    {new Date(entry.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  </td>
+                  <td className="px-5 py-3">
+                    <p className="font-medium truncate max-w-[200px]">{entry.merchant_name ?? entry.name}</p>
+                  </td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground hidden md:table-cell truncate max-w-[120px]">
+                    {entry.account_name}
+                  </td>
+                  <td className="px-5 py-3 text-right font-semibold tabular-nums text-emerald-600">
+                    +{formatCurrency(Math.abs(entry.amount))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
