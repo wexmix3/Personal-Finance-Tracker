@@ -1,0 +1,31 @@
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Database
+sqlalchemy==2.0.30
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+alembic==1.13.1
+
+# Auth / Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
+cryptography==42.0.7
+
+# Config / Env
+python-dotenv==1.0.1
+pydantic-settings==2.2.1
+
+# HTTP
+httpx==0.27.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# Logging
+python-json-logger==2.0.7
+
+# Forms / multipart (needed by FastAPI for OAuth2PasswordRequestForm)
+python-multipart==0.0.9

@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Monarch-inspired color palette */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 251 70% 58%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 94%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 220 14% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 251 70% 95%;
+    --accent-foreground: 251 70% 40%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    --border: 220 13% 90%;
+    --input: 220 13% 90%;
+    --ring: 251 70% 58%;
+    --radius: 0.75rem;
+
+    /* Sidebar */
+    --sidebar-bg: 222 47% 11%;
+    --sidebar-fg: 210 40% 98%;
+    --sidebar-muted: 215 20% 55%;
+    --sidebar-active: 251 70% 58%;
+    --sidebar-active-bg: 251 30% 20%;
+    --sidebar-hover: 222 35% 18%;
+    --sidebar-border: 222 35% 18%;
+  }
+
+  * { @apply border-border; }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Smooth scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+}
+
+@layer utilities {
+  .sidebar-bg { background-color: hsl(var(--sidebar-bg)); }
+  .sidebar-fg { color: hsl(var(--sidebar-fg)); }
+  .sidebar-muted { color: hsl(var(--sidebar-muted)); }
+  .sidebar-hover:hover { background-color: hsl(var(--sidebar-hover)); }
+  .sidebar-active { background-color: hsl(var(--sidebar-active-bg)); color: hsl(var(--sidebar-fg)); }
+  .text-success { color: hsl(var(--success)); }
+  .bg-success { background-color: hsl(var(--success)); }
+
+  /* Card elevation */
+  .card-base {
+    box-shadow:
+      0 1px 2px hsla(222, 47%, 11%, 0.04),
+      0 4px 16px hsla(222, 47%, 11%, 0.05);
+  }
+
+  /* Stat card accent strips */
+  .stat-accent-emerald { border-left: 3px solid #10b981; }
+  .stat-accent-rose    { border-left: 3px solid #f43f5e; }
+  .stat-accent-primary { border-left: 3px solid hsl(var(--primary)); }
+  .stat-accent-amber   { border-left: 3px solid #f59e0b; }
+}
