@@ -2,12 +2,13 @@
 
 import { useState, useCallback, useRef } from "react";
 import useSWR from "swr";
-import { Search, Trash2, ChevronDown, Eraser, Wand2, Plus, X, Receipt } from "lucide-react";
+import { Search, Trash2, ChevronDown, Eraser, Wand2, Plus, X, Receipt, Download } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { transactionsKey, apiFetcher, deleteTransaction, accountsKey, apiPatch, apiDelete, apiPost } from "@/lib/api";
 import { getStoredToken } from "@/lib/auth";
 import { ImportCsvModal } from "@/components/dashboard/ImportCsvModal";
 import { formatCurrency } from "@/lib/utils";
+import { getCategoryMeta } from "@/lib/categories";
 import type { AccountResponse, ApiResponse, TransactionResponse } from "@/types/api";
 
 const PAGE_SIZE = 25;
@@ -18,6 +19,27 @@ const COMMON_CATEGORIES = [
   "Housing", "Personal Care", "Insurance", "Subscriptions", "Education",
   "Income", "Transfer", "Uncategorized",
 ];
+
+function exportToCsv(items: TransactionResponse[]) {
+  const rows = [
+    ["Date", "Description", "Category", "Account", "Amount"],
+    ...items.map(t => [
+      t.date,
+      `"${(t.merchant_name ?? t.name).replace(/"/g, '""')}"`,
+      t.category?.[0] ?? "Uncategorized",
+      t.account_name ?? "",
+      t.amount < 0 ? (Math.abs(t.amount)).toFixed(2) : (-t.amount).toFixed(2),
+    ]),
+  ];
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `transactions-${new Date().toISOString().split("T")[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 async function fetchTxns(key: string) {
   const token = getStoredToken();
@@ -30,12 +52,15 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [page, setPage] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState("");
   const [clearing, setClearing] = useState(false);
   const [recategorizing, setRecategorizing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [newPattern, setNewPattern] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -49,7 +74,7 @@ export default function TransactionsPage() {
     "/api/categorization-rules", apiFetcher
   );
 
-  const swrKey = transactionsKey({ limit: PAGE_SIZE, offset: page * PAGE_SIZE, search: debouncedSearch || undefined, category: categoryFilter || undefined });
+  const swrKey = transactionsKey({ limit: PAGE_SIZE, offset: page * PAGE_SIZE, search: debouncedSearch || undefined, category: categoryFilter || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined });
   const { data, isLoading } = useSWR([swrKey, refreshKey], ([k]) => fetchTxns(k), { keepPreviousData: true });
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
@@ -69,6 +94,17 @@ export default function TransactionsPage() {
   async function handleDelete(id: string) {
     await deleteTransaction(id);
     refresh();
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const key = transactionsKey({ limit: 10000, search: debouncedSearch || undefined, category: categoryFilter || undefined, date_from: dateFrom || undefined, date_to: dateTo || undefined });
+      const { items: all } = await fetchTxns(key);
+      exportToCsv(all);
+    } finally {
+      setExporting(false);
+    }
   }
 
   async function handleClearAll() {
@@ -159,6 +195,17 @@ export default function TransactionsPage() {
               {clearing ? "Clearing…" : "Clear all"}
             </button>
           )}
+          {total > 0 && (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium text-muted-foreground hover:text-primary hover:border-primary transition-colors disabled:opacity-50"
+              title="Export filtered transactions as CSV"
+            >
+              <Download size={13} />
+              {exporting ? "Exporting…" : "Export CSV"}
+            </button>
+          )}
           {Array.isArray(accounts) && accounts.length > 0 && (
             <ImportCsvModal accounts={accounts} onSuccess={refresh} />
           )}
@@ -215,9 +262,9 @@ export default function TransactionsPage() {
         </div>
       )}
 
-      {/* Search + category filter */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
+      {/* Search + category filter + date range */}
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[160px]">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             className="w-full rounded-xl border bg-white pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -239,6 +286,29 @@ export default function TransactionsPage() {
           </select>
           <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
         </div>
+        <input
+          type="date"
+          value={dateFrom}
+          onChange={e => { setDateFrom(e.target.value); setPage(0); }}
+          className="rounded-xl border bg-white px-3 py-2.5 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          title="From date"
+        />
+        <input
+          type="date"
+          value={dateTo}
+          onChange={e => { setDateTo(e.target.value); setPage(0); }}
+          className="rounded-xl border bg-white px-3 py-2.5 text-sm text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          title="To date"
+        />
+        {(dateFrom || dateTo) && (
+          <button
+            onClick={() => { setDateFrom(""); setDateTo(""); setPage(0); }}
+            className="rounded-xl border px-3 py-2.5 text-xs text-muted-foreground hover:text-destructive hover:border-destructive transition-colors"
+            title="Clear date filter"
+          >
+            <X size={13} />
+          </button>
+        )}
       </div>
 
       {/* Table */}
@@ -270,14 +340,23 @@ export default function TransactionsPage() {
             <tbody className="divide-y">
               {items.map((txn) => {
                 const isUncategorized = !txn.category?.[0] || txn.category[0] === "Uncategorized";
+                const meta = getCategoryMeta(txn.category?.[0]);
+                const IconComponent = meta.icon;
                 return (
                 <tr key={txn.id} className={`transition-colors group ${isUncategorized ? "bg-amber-500/5 hover:bg-amber-500/10" : "hover:bg-muted/20"}`}>
                   <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
                     {new Date(txn.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </td>
                   <td className="px-5 py-3">
-                    <p className="font-medium truncate max-w-[180px]">{txn.merchant_name ?? txn.name}</p>
-                    {txn.pending && <span className="text-xs text-amber-500">Pending</span>}
+                    <div className="flex items-center gap-2.5">
+                      <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 ${meta.bg}`}>
+                        <IconComponent size={13} className={meta.color} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate max-w-[160px]">{txn.merchant_name ?? txn.name}</p>
+                        {txn.pending && <span className="text-xs text-amber-500">Pending</span>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-5 py-3 hidden md:table-cell">
                     {editingId === txn.id ? (
@@ -300,8 +379,9 @@ export default function TransactionsPage() {
                       <button
                         onClick={() => startEdit(txn)}
                         title="Click to edit category"
-                        className="rounded-full bg-accent px-2.5 py-0.5 text-xs text-primary font-medium hover:bg-primary/10 transition-colors cursor-pointer"
+                        className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium hover:opacity-80 transition-opacity cursor-pointer ${meta.bg} ${meta.color}`}
                       >
+                        <IconComponent size={10} />
                         {txn.category[0]}
                       </button>
                     ) : (

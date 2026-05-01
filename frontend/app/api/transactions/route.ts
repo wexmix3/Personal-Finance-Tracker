@@ -20,6 +20,8 @@ export async function GET(req: NextRequest) {
   const account_id = sp.get("account_id");
   const pending = sp.get("pending");
   const category = sp.get("category");
+  const date_from = sp.get("date_from");
+  const date_to = sp.get("date_to");
 
   const accountIds = await getUserAccountIds(user.sub);
   if (!accountIds.length) return Response.json({ data: [], error: null, meta: { total: 0, limit, offset } });
@@ -37,6 +39,8 @@ export async function GET(req: NextRequest) {
   if (search) q = q.or(`name.ilike.%${search}%,merchant_name.ilike.%${search}%`);
   if (pending != null) q = q.eq("pending", pending === "true");
   if (category) q = q.contains("category", [category]);
+  if (date_from) q = q.gte("date", date_from);
+  if (date_to) q = q.lte("date", date_to);
 
   const { data, count } = await q;
 

@@ -80,6 +80,8 @@ export function transactionsKey(params?: {
   search?: string;
   pending?: boolean;
   category?: string;
+  date_from?: string;
+  date_to?: string;
 }) {
   if (!params) return "/api/transactions";
   const q = new URLSearchParams();
@@ -89,6 +91,8 @@ export function transactionsKey(params?: {
   if (params.search) q.set("search", params.search);
   if (params.pending != null) q.set("pending", String(params.pending));
   if (params.category) q.set("category", params.category);
+  if (params.date_from) q.set("date_from", params.date_from);
+  if (params.date_to) q.set("date_to", params.date_to);
   const qs = q.toString();
   return `/api/transactions${qs ? `?${qs}` : ""}`;
 }
