@@ -8,6 +8,8 @@ export async function GET(req: NextRequest) {
   const user = await getAuthUser(req);
   if (!user) return unauthorized();
 
+  const debug = req.nextUrl.searchParams.get("debug") === "true";
+
   // Budgets for this user
   const { data: budgets, error } = await supaAdmin
     .from("budgets")
@@ -30,21 +32,31 @@ export async function GET(req: NextRequest) {
 
   const ids = (accounts ?? []).map((a: { id: string }) => a.id);
 
+  // Fetch ALL non-pending expense transactions for the current month.
+  // Use .not("pending", "is", true) (matches false AND null) to be consistent
+  // with the spending API and avoid missing manually-imported transactions.
   const { data: txns } = ids.length
     ? await supaAdmin
         .from("transactions")
-        .select("amount, category")
+        .select("id, amount, category, date, name")
         .in("account_id", ids)
         .gt("amount", 0)
-        .eq("pending", false)
+        .not("pending", "is", true)
         .gte("date", monthStart)
     : { data: [] };
 
-  // Aggregate spending by category
+  // Aggregate spending + count by category
   const spending: Record<string, number> = {};
+  const counts: Record<string, number> = {};
+  const debugTxns: { id: string; name: string; date: string; amount: number; category: string }[] = [];
+
   for (const t of txns ?? []) {
     const cat = (Array.isArray(t.category) ? t.category[0] : t.category) ?? "Uncategorized";
     spending[cat] = (spending[cat] ?? 0) + parseFloat(String(t.amount));
+    counts[cat] = (counts[cat] ?? 0) + 1;
+    if (debug) {
+      debugTxns.push({ id: t.id, name: t.name, date: t.date, amount: parseFloat(String(t.amount)), category: cat });
+    }
   }
 
   const data = budgets.map((b: { id: string; category: string; monthly_limit: number; created_at: string }) => {
@@ -57,8 +69,24 @@ export async function GET(req: NextRequest) {
       spent,
       remaining: parseFloat((limit - spent).toFixed(2)),
       pct_used: limit > 0 ? parseFloat(((spent / limit) * 100).toFixed(1)) : 0,
+      transaction_count: counts[b.category] ?? 0,
     };
   });
+
+  if (debug) {
+    return Response.json({
+      data,
+      debug: {
+        month_start: monthStart,
+        account_ids: ids,
+        total_expense_txns: txns?.length ?? 0,
+        spending_by_category: spending,
+        counts_by_category: counts,
+        transactions: debugTxns.sort((a, b) => b.amount - a.amount),
+      },
+      error: null,
+    });
+  }
 
   return Response.json({ data, error: null });
 }

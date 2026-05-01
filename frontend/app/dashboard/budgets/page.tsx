@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import useSWR from "swr";
-import { Plus, Trash2, AlertTriangle, Target } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Target, Bug } from "lucide-react";
 import { apiFetcher, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -21,6 +21,118 @@ interface Budget {
   spent: number;
   remaining: number;
   pct_used: number;
+  transaction_count: number;
+}
+
+interface DebugData {
+  month_start: string;
+  account_ids: string[];
+  total_expense_txns: number;
+  spending_by_category: Record<string, number>;
+  counts_by_category: Record<string, number>;
+  transactions: { id: string; name: string; date: string; amount: number; category: string }[];
+}
+
+function BudgetDebugPanel() {
+  const [open, setOpen] = useState(false);
+  const { data, isLoading } = useSWR<{ data: Budget[]; debug: DebugData }>(
+    open ? "/api/budgets?debug=true" : null,
+    apiFetcher
+  );
+  const debug = data?.debug;
+
+  return (
+    <div className="rounded-2xl bg-white border overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2 px-5 py-3 text-sm font-medium text-muted-foreground hover:bg-muted/30 transition-colors"
+      >
+        <Bug size={14} /> Budget Diagnostics {open ? "▲" : "▼"}
+      </button>
+      {open && (
+        <div className="px-5 pb-5 space-y-4 border-t">
+          {isLoading ? (
+            <p className="text-xs text-muted-foreground pt-3">Loading…</p>
+          ) : !debug ? (
+            <p className="text-xs text-rose-400 pt-3">Failed to load — are you logged in?</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3 pt-3">
+                {[
+                  ["Month start", debug.month_start],
+                  ["Accounts found", debug.account_ids.length],
+                  ["Expense txns found", debug.total_expense_txns],
+                ].map(([label, val]) => (
+                  <div key={String(label)} className="rounded-xl border p-3 text-center">
+                    <p className="text-lg font-bold">{val}</p>
+                    <p className="text-xs text-muted-foreground">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {debug.total_expense_txns === 0 && (
+                <p className="text-xs text-rose-400 font-medium">
+                  ⚠ No expense transactions found for this month. If you have transactions, they may have negative amounts — use the ⇄ flip button on your account to fix.
+                </p>
+              )}
+
+              {Object.keys(debug.spending_by_category).length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Spending by category (found in DB)</p>
+                  <div className="rounded-xl border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-muted/40 border-b">
+                        <th className="px-3 py-2 text-left font-medium">Category</th>
+                        <th className="px-3 py-2 text-right font-medium">Txns</th>
+                        <th className="px-3 py-2 text-right font-medium">Total</th>
+                      </tr></thead>
+                      <tbody className="divide-y">
+                        {Object.entries(debug.spending_by_category)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([cat, total]) => (
+                            <tr key={cat}>
+                              <td className="px-3 py-1.5">{cat}</td>
+                              <td className="px-3 py-1.5 text-right text-muted-foreground">{debug.counts_by_category[cat] ?? 0}</td>
+                              <td className="px-3 py-1.5 text-right font-semibold text-emerald-500">{formatCurrency(total)}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {debug.transactions.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold mb-2 text-muted-foreground uppercase tracking-wide">Sample transactions (top by amount)</p>
+                  <div className="rounded-xl border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead><tr className="bg-muted/40 border-b">
+                        <th className="px-3 py-2 text-left font-medium">Date</th>
+                        <th className="px-3 py-2 text-left font-medium">Name</th>
+                        <th className="px-3 py-2 text-left font-medium">Category</th>
+                        <th className="px-3 py-2 text-right font-medium">Amount</th>
+                      </tr></thead>
+                      <tbody className="divide-y">
+                        {debug.transactions.slice(0, 10).map(t => (
+                          <tr key={t.id}>
+                            <td className="px-3 py-1.5 text-muted-foreground">{t.date}</td>
+                            <td className="px-3 py-1.5 truncate max-w-[160px]">{t.name}</td>
+                            <td className="px-3 py-1.5">{t.category}</td>
+                            <td className="px-3 py-1.5 text-right font-semibold text-emerald-500">{formatCurrency(t.amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function progressColor(pct: number) {
@@ -286,15 +398,24 @@ export default function BudgetsPage() {
                 />
               </div>
 
-              <p className={`text-xs font-medium ${b.remaining >= 0 ? "text-muted-foreground" : "text-rose-500"}`}>
-                {b.remaining >= 0
-                  ? `${formatCurrency(b.remaining)} remaining`
-                  : `${formatCurrency(Math.abs(b.remaining))} over budget`}
-              </p>
+              <div className="flex items-center justify-between">
+                <p className={`text-xs font-medium ${b.remaining >= 0 ? "text-muted-foreground" : "text-rose-500"}`}>
+                  {b.remaining >= 0
+                    ? `${formatCurrency(b.remaining)} remaining`
+                    : `${formatCurrency(Math.abs(b.remaining))} over budget`}
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  {b.transaction_count === 0
+                    ? "no transactions found"
+                    : `${b.transaction_count} txn${b.transaction_count === 1 ? "" : "s"}`}
+                </p>
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <BudgetDebugPanel />
     </div>
   );
 }
