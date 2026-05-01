@@ -4,38 +4,38 @@
 
 @layer base {
   :root {
-    /* Monarch-inspired color palette */
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    /* Dark-first palette — Robinhood / Revolut inspired */
+    --background: 222 47% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222 43% 11%;
+    --card-foreground: 210 40% 96%;
+    --popover: 222 43% 11%;
+    --popover-foreground: 210 40% 96%;
     --primary: 251 70% 58%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 14% 94%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 220 14% 94%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 251 70% 95%;
-    --accent-foreground: 251 70% 40%;
+    --secondary: 222 38% 16%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 222 38% 15%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 251 40% 20%;
+    --accent-foreground: 251 80% 85%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
+    --border: 222 35% 18%;
+    --input: 222 38% 14%;
     --ring: 251 70% 58%;
     --radius: 0.75rem;
 
-    /* Sidebar */
-    --sidebar-bg: 222 47% 11%;
-    --sidebar-fg: 210 40% 98%;
-    --sidebar-muted: 215 20% 55%;
+    /* Sidebar — deepest layer */
+    --sidebar-bg: 222 50% 5%;
+    --sidebar-fg: 210 40% 92%;
+    --sidebar-muted: 215 18% 50%;
     --sidebar-active: 251 70% 58%;
-    --sidebar-active-bg: 251 30% 20%;
-    --sidebar-hover: 222 35% 18%;
-    --sidebar-border: 222 35% 18%;
+    --sidebar-active-bg: 251 40% 18%;
+    --sidebar-hover: 222 45% 10%;
+    --sidebar-border: 222 40% 12%;
   }
 
   * { @apply border-border; }
@@ -45,7 +45,7 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Smooth scrollbar */
+  /* Dark scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
@@ -60,11 +60,11 @@
   .text-success { color: hsl(var(--success)); }
   .bg-success { background-color: hsl(var(--success)); }
 
-  /* Card elevation */
+  /* Card elevation — stronger shadows for dark */
   .card-base {
     box-shadow:
-      0 1px 2px hsla(222, 47%, 11%, 0.04),
-      0 4px 16px hsla(222, 47%, 11%, 0.05);
+      0 1px 3px rgba(0, 0, 0, 0.4),
+      0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
   /* Stat card accent strips */
@@ -72,4 +72,9 @@
   .stat-accent-rose    { border-left: 3px solid #f43f5e; }
   .stat-accent-primary { border-left: 3px solid hsl(var(--primary)); }
   .stat-accent-amber   { border-left: 3px solid #f59e0b; }
+
+  /* Map bg-white to card background for dark theme */
+  .bg-white {
+    background-color: hsl(var(--card));
+  }
 }

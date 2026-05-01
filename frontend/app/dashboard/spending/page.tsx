@@ -327,7 +327,7 @@ export default function SpendingPage() {
                       </Pie>
                       <Tooltip
                         formatter={(v: number, name: string) => [formatCurrency(v), name]}
-                        contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid hsl(220,13%,90%)", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}
+                        contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #1e3251", background: "#0d1b2e", color: "#e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -356,10 +356,10 @@ export default function SpendingPage() {
               <h2 className="font-display font-semibold mb-5">Top Categories</h2>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={spending.slice(0, 7)} layout="vertical" barSize={12} margin={{ left: 0, right: 8, top: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#1e3251" />
                   <XAxis
                     type="number"
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    tick={{ fontSize: 11, fill: "#64748b" }}
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
@@ -374,8 +374,8 @@ export default function SpendingPage() {
                   />
                   <Tooltip
                     formatter={(v: number) => [formatCurrency(v), "Spent"]}
-                    contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid hsl(220,13%,90%)", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}
-                    cursor={{ fill: "hsl(220,14%,96%)" }}
+                    contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #1e3251", background: "#0d1b2e", color: "#e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
+                    cursor={{ fill: "rgba(30,50,81,0.4)" }}
                   />
                   <Bar dataKey="total" radius={[0, 5, 5, 0]}>
                     {spending.slice(0, 7).map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}

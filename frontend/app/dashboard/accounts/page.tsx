@@ -7,6 +7,7 @@ import { apiFetcher, accountsKey, deleteAccount, updateAccountBalance, apiPost }
 import { AddAccountModal } from "@/components/dashboard/AddAccountModal";
 import { ImportCsvModal } from "@/components/dashboard/ImportCsvModal";
 import { formatCurrency } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { AccountResponse } from "@/types/api";
 
 interface DebugInfo {
@@ -170,11 +171,12 @@ export default function AccountsPage() {
       </div>
 
       {(!accounts || accounts.length === 0) ? (
-        <div className="rounded-2xl bg-white border flex flex-col items-center justify-center py-16 text-center gap-4">
-          <Wallet size={32} className="text-muted-foreground" />
-          <p className="text-muted-foreground text-sm">No accounts yet. Add one to get started.</p>
-          <AddAccountModal label="Add Account" onSuccess={refresh} />
-        </div>
+        <EmptyState
+          icon={<Wallet size={28} />}
+          title="No accounts yet"
+          description="Link your bank accounts, credit cards, and investments to get a complete view of your finances."
+          actionNode={<AddAccountModal label="Add Account" onSuccess={refresh} />}
+        />
       ) : (
         TYPE_ORDER.filter(t => byType[t].length > 0).map(type => (
           <div key={type} className="rounded-2xl bg-white border overflow-hidden">

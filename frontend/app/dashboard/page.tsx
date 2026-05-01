@@ -6,12 +6,32 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from "recharts";
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const points = data.map((v, i) => ({ i, v }));
+  return (
+    <ResponsiveContainer width="100%" height={40}>
+      <AreaChart data={points} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id={`spark-${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={color} stopOpacity={0.25} />
+            <stop offset="95%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <Area type="monotone" dataKey="v" stroke={color} strokeWidth={1.5} fill={`url(#spark-${color.replace("#", "")})`} dot={false} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
 import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { apiFetcher, netWorthKey, netWorthHistoryKey, accountsKey, transactionsKey } from "@/lib/api";
 import { getStoredToken } from "@/lib/auth";
 import { AddAccountModal } from "@/components/dashboard/AddAccountModal";
 import { ImportCsvModal } from "@/components/dashboard/ImportCsvModal";
 import { formatCurrency } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { useAuth } from "@/lib/auth";
 import type { AccountResponse, NetWorthResponse, TransactionResponse } from "@/types/api";
 
 const CATEGORY_COLORS = [
@@ -24,9 +44,23 @@ interface HistoryPoint { date: string; net_worth: number; assets: number; liabil
 interface SpendingItem { category: string; total: number; }
 interface SpendingData { expenses: SpendingItem[]; income_total: number; prior_total: number; }
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getDisplayName(email: string): string {
+  const local = email.split("@")[0];
+  const name = local.replace(/[^a-zA-Z]/g, " ").trim().split(" ")[0];
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+}
+
 export default function DashboardPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+  const { user } = useAuth();
 
   const { data: nw } = useSWR<NetWorthResponse>([netWorthKey(), refreshKey], ([k]) => apiFetcher(k));
   const { data: history } = useSWR<HistoryPoint[]>([netWorthHistoryKey(90), refreshKey], ([k]) => apiFetcher(k));
@@ -54,32 +88,44 @@ export default function DashboardPage() {
   const last = history?.[history.length - 1]?.net_worth ?? 0;
   const nwChange = last - first;
 
+  const nwSparkline = (history ?? []).slice(-14).map(p => p.net_worth);
+  const savingsSparkline = nwSparkline.map((v, i, arr) => (i === 0 ? 0 : v - arr[i - 1]));
+
   if (!hasAccounts && accounts !== undefined) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">
-        <div className="h-20 w-20 rounded-full bg-accent flex items-center justify-center">
-          <Wallet size={36} className="text-primary" />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <div className="w-full max-w-md">
+          <EmptyState
+            icon={<Wallet size={32} />}
+            title="Welcome to your dashboard"
+            description="Add your first account to see your complete financial picture — net worth, spending trends, and more."
+            actionNode={<AddAccountModal label="Add Your First Account" onSuccess={refresh} />}
+          />
         </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold mb-2">Welcome to Your Dashboard</h1>
-          <p className="text-muted-foreground max-w-sm">
-            Add your first account to see your complete financial picture — net worth, spending trends, and more.
-          </p>
-        </div>
-        <AddAccountModal label="Add Your First Account" onSuccess={refresh} />
       </div>
     );
   }
 
   return (
     <div className="space-y-5 max-w-7xl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      {/* Personalized greeting header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">Overview</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your complete financial picture</p>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">
+            {user ? `${getGreeting()}, ${getDisplayName(user.email)}` : "Overview"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            {incomeTotal > 0 && totalSpending > 0 && (
+              <span className={`ml-2 font-medium ${incomeTotal >= totalSpending ? "text-emerald-500" : "text-rose-500"}`}>
+                · {incomeTotal >= totalSpending
+                  ? `${formatCurrency(incomeTotal - totalSpending)} saved this month`
+                  : `${formatCurrency(totalSpending - incomeTotal)} over budget`}
+              </span>
+            )}
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-1">
           {hasAccounts && <ImportCsvModal accounts={accounts!} onSuccess={refresh} />}
           <AddAccountModal variant="outline" label="Add Account" onSuccess={refresh} />
         </div>
@@ -91,7 +137,7 @@ export default function DashboardPage() {
         <div className="flex-1 px-2 py-1 sm:pr-6">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Net Worth</p>
           <p className="font-display text-4xl font-extrabold tracking-tight mt-1.5">
-            {formatCurrency(nw?.net_worth ?? 0)}
+            <AnimatedNumber value={nw?.net_worth ?? 0} prefix="$" decimals={0} />
           </p>
           {history && history.length > 1 && (
             <p className={`mt-1.5 text-xs font-medium flex items-center gap-1 ${nwChange >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
@@ -107,7 +153,7 @@ export default function DashboardPage() {
         <div className="flex-1 border-t sm:border-t-0 sm:border-l pt-4 sm:pt-0 sm:px-6 py-1">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Assets</p>
           <p className="font-display text-2xl font-bold text-emerald-600 mt-1.5">
-            {formatCurrency(nw?.total_assets ?? 0)}
+            <AnimatedNumber value={nw?.total_assets ?? 0} prefix="$" decimals={0} />
           </p>
         </div>
 
@@ -117,7 +163,7 @@ export default function DashboardPage() {
         <div className="flex-1 border-t sm:border-t-0 sm:border-l pt-4 sm:pt-0 sm:px-6 py-1">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Total Liabilities</p>
           <p className="font-display text-2xl font-bold text-rose-500 mt-1.5">
-            {formatCurrency(nw?.total_liabilities ?? 0)}
+            <AnimatedNumber value={nw?.total_liabilities ?? 0} prefix="$" decimals={0} />
           </p>
         </div>
       </div>
@@ -125,24 +171,31 @@ export default function DashboardPage() {
       {/* Monthly snapshot */}
       {(incomeTotal > 0 || totalSpending > 0) && (
         <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-2xl bg-white border card-base stat-accent-emerald p-5">
+          <div className="rounded-2xl bg-white border card-base stat-accent-emerald p-5 pb-3">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Income (30d)</p>
-            <p className="font-display text-2xl font-bold text-emerald-600 mt-1.5">{formatCurrency(incomeTotal)}</p>
+            <p className="font-display text-2xl font-bold text-emerald-600 mt-1.5">
+              <AnimatedNumber value={incomeTotal} prefix="$" decimals={0} />
+            </p>
+            {nwSparkline.length > 2 && <div className="mt-3 -mx-1"><Sparkline data={nwSparkline} color="#10b981" /></div>}
           </div>
-          <div className="rounded-2xl bg-white border card-base stat-accent-primary p-5">
+          <div className="rounded-2xl bg-white border card-base stat-accent-primary p-5 pb-3">
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Spent (30d)</p>
-            <p className="font-display text-2xl font-bold mt-1.5">{formatCurrency(totalSpending)}</p>
+            <p className="font-display text-2xl font-bold mt-1.5">
+              <AnimatedNumber value={totalSpending} prefix="$" decimals={0} />
+            </p>
+            {spending.length > 1 && <div className="mt-3 -mx-1"><Sparkline data={spending.map(s => s.total)} color="#6366f1" /></div>}
           </div>
-          <div className={`rounded-2xl bg-white border card-base p-5 ${savingsRate !== null && savingsRate >= 0 ? "stat-accent-emerald" : "stat-accent-rose"}`}>
+          <div className={`rounded-2xl bg-white border card-base p-5 pb-3 ${savingsRate !== null && savingsRate >= 0 ? "stat-accent-emerald" : "stat-accent-rose"}`}>
             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Savings Rate</p>
             {savingsRate !== null ? (
               <>
                 <p className={`font-display text-2xl font-bold mt-1.5 ${savingsRate >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
-                  {savingsRate.toFixed(0)}%
+                  <AnimatedNumber value={savingsRate} suffix="%" decimals={0} />
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {formatCurrency(Math.abs(incomeTotal - totalSpending))} {incomeTotal >= totalSpending ? "saved" : "over budget"}
                 </p>
+                {savingsSparkline.length > 2 && <div className="mt-2 -mx-1"><Sparkline data={savingsSparkline} color={savingsRate >= 0 ? "#10b981" : "#f43f5e"} /></div>}
               </>
             ) : (
               <p className="font-display text-2xl font-bold text-muted-foreground mt-1.5">—</p>
@@ -169,12 +222,12 @@ export default function DashboardPage() {
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e3251" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
               <Tooltip
                 formatter={(v: number) => [formatCurrency(v), "Net Worth"]}
-                contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid hsl(220,13%,90%)", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}
+                contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #1e3251", background: "#0d1b2e", color: "#e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
                 cursor={{ stroke: "#6366f1", strokeWidth: 1, strokeDasharray: "4 2" }}
               />
               <Area type="monotone" dataKey="net_worth" stroke="#6366f1" strokeWidth={2.5} fill="url(#nwGrad)" dot={false} activeDot={{ r: 4, fill: "#6366f1", strokeWidth: 0 }} />
@@ -211,7 +264,7 @@ export default function DashboardPage() {
                     </Pie>
                     <Tooltip
                       formatter={(v: number) => [formatCurrency(v)]}
-                      contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid hsl(220,13%,90%)" }}
+                      contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #1e3251", background: "#0d1b2e", color: "#e2e8f0" }}
                     />
                   </PieChart>
                 </ResponsiveContainer>

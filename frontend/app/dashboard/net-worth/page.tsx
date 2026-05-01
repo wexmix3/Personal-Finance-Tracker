@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { apiFetcher, netWorthKey, netWorthHistoryKey } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import type { NetWorthResponse } from "@/types/api";
 
 interface HistoryPoint { date: string; net_worth: number; assets: number; liabilities: number; }
@@ -70,7 +71,7 @@ export default function NetWorthPage() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className={`rounded-2xl bg-white border card-base p-5 ${nwPositive ? "stat-accent-emerald" : "stat-accent-rose"}`}>
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Current Net Worth</p>
-          <p className="font-display text-2xl font-bold">{formatCurrency(nw?.net_worth ?? 0)}</p>
+          <p className="font-display text-2xl font-bold"><AnimatedNumber value={nw?.net_worth ?? 0} prefix="$" decimals={0} /></p>
           {pct && (
             <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${change >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
               {change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
@@ -80,11 +81,11 @@ export default function NetWorthPage() {
         </div>
         <div className="rounded-2xl bg-white border card-base stat-accent-emerald p-5">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Assets</p>
-          <p className="font-display text-2xl font-bold text-emerald-600">{formatCurrency(nw?.total_assets ?? 0)}</p>
+          <p className="font-display text-2xl font-bold text-emerald-600"><AnimatedNumber value={nw?.total_assets ?? 0} prefix="$" decimals={0} /></p>
         </div>
         <div className="rounded-2xl bg-white border card-base stat-accent-rose p-5">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Liabilities</p>
-          <p className="font-display text-2xl font-bold text-rose-500">{formatCurrency(nw?.total_liabilities ?? 0)}</p>
+          <p className="font-display text-2xl font-bold text-rose-500"><AnimatedNumber value={nw?.total_liabilities ?? 0} prefix="$" decimals={0} /></p>
         </div>
       </div>
 
@@ -121,18 +122,18 @@ export default function NetWorthPage() {
                   <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1e3251" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
               <YAxis
-                tick={{ fontSize: 11, fill: "#94a3b8" }}
+                tick={{ fontSize: 11, fill: "#64748b" }}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
                 formatter={(v: number, name: string) => [formatCurrency(v), name === "assets" ? "Assets" : "Net Worth"]}
-                contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid hsl(220,13%,90%)", boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}
-                cursor={{ stroke: "#94a3b8", strokeWidth: 1, strokeDasharray: "4 2" }}
+                contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #1e3251", background: "#0d1b2e", color: "#e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
+                cursor={{ stroke: "#64748b", strokeWidth: 1, strokeDasharray: "4 2" }}
               />
               <Area
                 type="monotone"

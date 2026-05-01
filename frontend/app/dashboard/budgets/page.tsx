@@ -2,9 +2,10 @@
 
 import { useState, useCallback } from "react";
 import useSWR from "swr";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, Target } from "lucide-react";
 import { apiFetcher, apiPost, apiPatch, apiDelete } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 const COMMON_CATEGORIES = [
   "Food & Drink", "Groceries", "Restaurants", "Shopping", "Transportation",
@@ -201,17 +202,17 @@ export default function BudgetsPage() {
 
       {/* Alerts */}
       {overBudgetCount > 0 && (
-        <div className="flex items-center gap-3 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3">
-          <AlertTriangle size={16} className="text-rose-500 flex-shrink-0" />
-          <p className="text-sm text-rose-700 font-medium">
+        <div className="flex items-center gap-3 rounded-xl bg-rose-500/10 border border-rose-500/30 px-4 py-3">
+          <AlertTriangle size={16} className="text-rose-400 flex-shrink-0" />
+          <p className="text-sm text-rose-400 font-medium">
             {overBudgetCount} {overBudgetCount === 1 ? "category is" : "categories are"} over budget this month
           </p>
         </div>
       )}
       {!overBudgetCount && nearLimitCount > 0 && (
-        <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
-          <AlertTriangle size={16} className="text-amber-500 flex-shrink-0" />
-          <p className="text-sm text-amber-700 font-medium">
+        <div className="flex items-center gap-3 rounded-xl bg-amber-500/10 border border-amber-500/30 px-4 py-3">
+          <AlertTriangle size={16} className="text-amber-400 flex-shrink-0" />
+          <p className="text-sm text-amber-400 font-medium">
             {nearLimitCount} {nearLimitCount === 1 ? "category is" : "categories are"} approaching the limit
           </p>
         </div>
@@ -222,17 +223,11 @@ export default function BudgetsPage() {
           {[1, 2, 3, 4].map(i => <div key={i} className="h-32 rounded-2xl bg-white border animate-pulse" />)}
         </div>
       ) : !budgets || budgets.length === 0 ? (
-        <div className="rounded-2xl bg-white border flex flex-col items-center justify-center py-20 gap-3 text-center px-4">
-          <div className="h-14 w-14 rounded-full bg-accent flex items-center justify-center">
-            <span className="text-2xl">🎯</span>
-          </div>
-          <div>
-            <p className="font-semibold text-base">No budgets yet</p>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Set monthly spending limits by category. The app will track your actual spending against each budget automatically.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          icon={<Target size={28} />}
+          title="No budgets yet"
+          description="Set monthly spending limits by category. The app will track your actual spending against each budget automatically."
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {budgets.map(b => (

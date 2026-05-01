@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import useSWR from "swr";
-import { Search, Trash2, ChevronDown, Eraser, Wand2, Plus, X } from "lucide-react";
+import { Search, Trash2, ChevronDown, Eraser, Wand2, Plus, X, Receipt } from "lucide-react";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { transactionsKey, apiFetcher, deleteTransaction, accountsKey, apiPatch, apiDelete, apiPost } from "@/lib/api";
 import { getStoredToken } from "@/lib/auth";
 import { ImportCsvModal } from "@/components/dashboard/ImportCsvModal";
@@ -247,10 +248,12 @@ export default function TransactionsPage() {
             {[1,2,3,4,5].map(i => <div key={i} className="h-10 animate-pulse rounded bg-muted" />)}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-muted-foreground text-sm">
-              {debouncedSearch ? `No results for "${debouncedSearch}"` : "No transactions yet — import a CSV from your bank"}
-            </p>
+          <div className="p-6">
+            <EmptyState
+              icon={<Receipt size={28} />}
+              title={debouncedSearch ? "No results found" : "No transactions yet"}
+              description={debouncedSearch ? `No transactions match "${debouncedSearch}". Try a different search term.` : "Import a CSV from your bank to get started tracking your spending."}
+            />
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -268,7 +271,7 @@ export default function TransactionsPage() {
               {items.map((txn) => {
                 const isUncategorized = !txn.category?.[0] || txn.category[0] === "Uncategorized";
                 return (
-                <tr key={txn.id} className={`transition-colors group ${isUncategorized ? "bg-amber-50/60 hover:bg-amber-50" : "hover:bg-muted/20"}`}>
+                <tr key={txn.id} className={`transition-colors group ${isUncategorized ? "bg-amber-500/5 hover:bg-amber-500/10" : "hover:bg-muted/20"}`}>
                   <td className="px-5 py-3 text-xs text-muted-foreground whitespace-nowrap">
                     {new Date(txn.date + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </td>
@@ -305,7 +308,7 @@ export default function TransactionsPage() {
                       <button
                         onClick={() => startEdit(txn)}
                         title="Click to categorize"
-                        className="rounded-full bg-amber-100 border border-amber-200 px-2.5 py-0.5 text-xs text-amber-700 font-medium hover:bg-amber-200 transition-colors cursor-pointer"
+                        className="rounded-full bg-amber-500/10 border border-amber-500/30 px-2.5 py-0.5 text-xs text-amber-400 font-medium hover:bg-amber-500/20 transition-colors cursor-pointer"
                       >
                         Uncategorized
                       </button>
