@@ -117,12 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.detail ?? body.error ?? `Registration failed (${res.status})`);
-
-    const t: string = body.data.access_token;
-    const u = await fetchMe(t);
-    if (!u) throw new Error("Could not fetch user after registration");
-    applyToken(t, u);
-  }, [applyToken]);
+    // Registration now sends a verification email — no token returned
+  }, []);
 
   const logout = useCallback(async () => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);

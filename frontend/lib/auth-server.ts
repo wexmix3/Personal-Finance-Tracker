@@ -36,6 +36,20 @@ export async function verifyRefreshToken(token: string): Promise<JWTPayload> {
   return { sub: payload.sub as string, email: payload["email"] as string };
 }
 
+export async function signVerifyToken(payload: JWTPayload): Promise<string> {
+  return new SignJWT({ ...payload, typ: "verify" })
+    .setProtectedHeader({ alg: ALG })
+    .setIssuedAt()
+    .setExpirationTime("24h")
+    .sign(SECRET);
+}
+
+export async function verifyVerifyToken(token: string): Promise<JWTPayload> {
+  const { payload } = await jwtVerify(token, SECRET);
+  if (payload["typ"] !== "verify") throw new Error("Not a verify token");
+  return { sub: payload.sub as string, email: payload["email"] as string };
+}
+
 export async function signResetToken(payload: JWTPayload): Promise<string> {
   return new SignJWT({ ...payload, typ: "reset" })
     .setProtectedHeader({ alg: ALG })

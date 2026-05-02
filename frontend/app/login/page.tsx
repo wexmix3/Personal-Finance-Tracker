@@ -29,6 +29,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [registered, setRegistered] = useState(false);
 
   useEffect(() => {
     if (!authLoading && token) router.replace("/dashboard");
@@ -41,10 +42,11 @@ function LoginForm() {
     try {
       if (tab === "login") {
         await login(email, password);
+        router.replace("/dashboard");
       } else {
         await register(email, password);
+        setRegistered(true);
       }
-      router.replace("/dashboard");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -89,6 +91,21 @@ function LoginForm() {
         </div>
 
         <CardContent>
+          {registered ? (
+            <div className="space-y-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                We sent a verification link to <strong>{email}</strong>. Click it to activate your account, then sign in.
+              </p>
+              <p className="text-xs text-muted-foreground">Didn't get it? Check your spam folder.</p>
+              <button
+                type="button"
+                onClick={() => { setRegistered(false); setTab("login"); setPassword(""); }}
+                className="w-full rounded-md border px-4 py-2 text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Back to Sign In
+              </button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -139,6 +156,7 @@ function LoginForm() {
                 : tab === "login" ? "Sign In" : "Create Account"}
             </Button>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>

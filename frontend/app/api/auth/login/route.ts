@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
     const { data: user } = await supaAdmin
       .from("users")
-      .select("id, email, hashed_password")
+      .select("id, email, hashed_password, email_verified")
       .eq("email", email.toLowerCase())
       .maybeSingle();
 
@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
     const valid = await bcrypt.compare(password, user.hashed_password);
     if (!valid)
       return Response.json({ data: null, error: "Incorrect email or password" }, { status: 401 });
+
+    if (!user.email_verified)
+      return Response.json({ data: null, error: "Please verify your email before signing in. Check your inbox for the verification link." }, { status: 403 });
 
     const payload = { sub: user.id, email: user.email };
     const [access_token, refresh_token] = await Promise.all([
