@@ -63,7 +63,7 @@ function BudgetDebugPanel() {
           {isLoading ? (
             <p className="text-xs text-muted-foreground pt-3">Loading…</p>
           ) : !debug ? (
-            <p className="text-xs text-rose-400 pt-3">Failed to load — are you logged in?</p>
+            <p className="text-xs text-rose-400 pt-3">Failed to load diagnostics. Try refreshing the page.</p>
           ) : (
             <>
               <div className="grid grid-cols-3 gap-3 pt-3">
@@ -80,8 +80,8 @@ function BudgetDebugPanel() {
               </div>
 
               {debug.total_expense_txns === 0 && (
-                <p className="text-xs text-rose-400 font-medium">
-                  ⚠ No expense transactions found for this month. If you have transactions, they may have negative amounts — use the ⇄ flip button on your account to fix.
+                <p className="text-xs text-amber-500 font-medium">
+                  No transactions found for {debug.month_start.slice(0, 7)}. Budgets track the current calendar month only — import a CSV with this month&apos;s transactions to see spending. If your transactions have negative amounts, use the ⇄ flip option during import.
                 </p>
               )}
 
