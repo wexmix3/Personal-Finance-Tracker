@@ -36,6 +36,20 @@ export async function verifyRefreshToken(token: string): Promise<JWTPayload> {
   return { sub: payload.sub as string, email: payload["email"] as string };
 }
 
+export async function signResetToken(payload: JWTPayload): Promise<string> {
+  return new SignJWT({ ...payload, typ: "reset" })
+    .setProtectedHeader({ alg: ALG })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(SECRET);
+}
+
+export async function verifyResetToken(token: string): Promise<JWTPayload> {
+  const { payload } = await jwtVerify(token, SECRET);
+  if (payload["typ"] !== "reset") throw new Error("Not a reset token");
+  return { sub: payload.sub as string, email: payload["email"] as string };
+}
+
 export function makeRefreshCookieHeader(token: string): string {
   const maxAge = 30 * 24 * 60 * 60;
   return `${REFRESH_COOKIE}=${token}; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=${maxAge}`;
