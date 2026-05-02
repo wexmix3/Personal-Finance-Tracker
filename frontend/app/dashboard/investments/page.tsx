@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { apiFetcher } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface AccountPerf {
   id: string;
@@ -113,17 +114,11 @@ export default function InvestmentsPage() {
           </div>
         </div>
       ) : !data || data.accounts.length === 0 ? (
-        <div className="rounded-2xl bg-white border flex flex-col items-center justify-center py-20 gap-3 text-center px-4">
-          <div className="h-14 w-14 rounded-full bg-accent flex items-center justify-center">
-            <TrendingUp size={24} className="text-primary" />
-          </div>
-          <div>
-            <p className="font-semibold text-base">No investment accounts</p>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Add accounts with type "Investment" to track your portfolio performance here.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          icon={<TrendingUp size={28} />}
+          title="No investment accounts"
+          description='Add accounts with type "Investment" to track your portfolio performance here.'
+        />
       ) : (
         <>
           {/* Portfolio summary */}

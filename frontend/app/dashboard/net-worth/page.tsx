@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import useSWR from "swr";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart2 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { apiFetcher, netWorthKey, netWorthHistoryKey } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { NetWorthResponse } from "@/types/api";
 
 interface HistoryPoint { date: string; net_worth: number; assets: number; liabilities: number; }
@@ -157,11 +158,11 @@ export default function NetWorthPage() {
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="rounded-2xl bg-white border card-base flex items-center justify-center py-24">
-          <p className="text-muted-foreground text-sm text-center max-w-xs">
-            Not enough data yet — update your account balances regularly to see trends.
-          </p>
-        </div>
+        <EmptyState
+          icon={<BarChart2 size={28} />}
+          title="Not enough data yet"
+          description="Update your account balances regularly to build up a history and see trends over time."
+        />
       )}
     </div>
   );

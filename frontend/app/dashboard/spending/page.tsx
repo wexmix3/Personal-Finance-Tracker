@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import { apiFetcher, apiPost, accountsKey } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
 import type { AccountResponse } from "@/types/api";
+import type { MonthlyPoint } from "@/app/api/spending/monthly/route";
 
 const COLORS = ["#6366f1","#8b5cf6","#a78bfa","#c4b5fd","#818cf8","#4f46e5","#7c3aed","#9333ea","#a855f7","#d946ef"];
 
@@ -187,6 +188,7 @@ export default function SpendingPage() {
   const [days, setDays] = useState(30);
   const [isYtd, setIsYtd] = useState(false);
   const [isAllTime, setIsAllTime] = useState(false);
+  const [isMonthly, setIsMonthly] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const refreshAll = useCallback(() => setRefreshKey(k => k + 1), []);
 
@@ -205,6 +207,11 @@ export default function SpendingPage() {
   );
 
   const { data: accounts } = useSWR<AccountResponse[]>(accountsKey(), apiFetcher);
+  const { data: monthlyData } = useSWR<MonthlyPoint[]>(
+    isMonthly ? ["/api/spending/monthly?months=12", refreshKey] : null,
+    ([k]) => apiFetcher(k),
+    { keepPreviousData: true }
+  );
 
   const spending = data?.expenses ?? [];
   const incomeTotal = data?.income_total ?? 0;
@@ -228,28 +235,141 @@ export default function SpendingPage() {
           {STATIC_PERIODS.map(({ label, days: d }) => (
             <button
               key={d}
-              onClick={() => { setDays(d); setIsYtd(false); setIsAllTime(false); }}
-              className={`px-4 py-2 text-xs font-medium transition-colors ${!isYtd && !isAllTime && days === d ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
+              onClick={() => { setDays(d); setIsYtd(false); setIsAllTime(false); setIsMonthly(false); }}
+              className={`px-4 py-2 text-xs font-medium transition-colors ${!isYtd && !isAllTime && !isMonthly && days === d ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
             >
               {label}
             </button>
           ))}
           <button
-            onClick={() => { setIsYtd(true); setIsAllTime(false); }}
-            className={`px-4 py-2 text-xs font-medium transition-colors ${isYtd && !isAllTime ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
+            onClick={() => { setIsYtd(true); setIsAllTime(false); setIsMonthly(false); }}
+            className={`px-4 py-2 text-xs font-medium transition-colors ${isYtd && !isAllTime && !isMonthly ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
           >
             YTD
           </button>
           <button
-            onClick={() => { setIsAllTime(true); setIsYtd(false); }}
-            className={`px-4 py-2 text-xs font-medium transition-colors ${isAllTime ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
+            onClick={() => { setIsAllTime(true); setIsYtd(false); setIsMonthly(false); }}
+            className={`px-4 py-2 text-xs font-medium transition-colors ${isAllTime && !isMonthly ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
           >
             All
+          </button>
+          <button
+            onClick={() => { setIsMonthly(true); setIsAllTime(false); setIsYtd(false); }}
+            className={`px-4 py-2 text-xs font-medium transition-colors border-l ${isMonthly ? "bg-primary text-white" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            Monthly
           </button>
         </div>
       </div>
 
-      {isLoading ? (
+      {/* ── Monthly history view ─────────────────────────────────────── */}
+      {isMonthly && (
+        <div className="space-y-5">
+          {!monthlyData ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => <div key={i} className="rounded-2xl bg-white border h-28 animate-pulse" />)}
+            </div>
+          ) : monthlyData.length === 0 ? (
+            <div className="rounded-2xl bg-white border flex items-center justify-center py-24">
+              <p className="text-muted-foreground text-sm text-center max-w-xs">No transactions found. Import a CSV to see your monthly history.</p>
+            </div>
+          ) : (
+            <>
+              {/* Summary row — last 12 months totals */}
+              {(() => {
+                const totalSpent = monthlyData.reduce((s, m) => s + m.spent, 0);
+                const totalIncome = monthlyData.reduce((s, m) => s + m.income, 0);
+                const avgSpent = totalSpent / monthlyData.length;
+                return (
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="rounded-2xl bg-white border card-base stat-accent-primary p-5">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Avg Monthly Spend</p>
+                      <p className="font-display text-2xl font-bold">{formatCurrency(avgSpent)}</p>
+                      <p className="text-xs text-muted-foreground mt-1">over {monthlyData.length} months</p>
+                    </div>
+                    <div className="rounded-2xl bg-white border card-base stat-accent-emerald p-5">
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Income (12m)</p>
+                      <p className="font-display text-2xl font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+                    </div>
+                    <div className={`rounded-2xl bg-white border card-base p-5 ${totalIncome >= totalSpent ? "stat-accent-emerald" : "stat-accent-rose"}`}>
+                      <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">Total Net Savings (12m)</p>
+                      <p className={`font-display text-2xl font-bold ${totalIncome >= totalSpent ? "text-emerald-600" : "text-rose-500"}`}>
+                        {formatCurrency(totalIncome - totalSpent)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Grouped bar chart */}
+              <div className="rounded-2xl bg-white border card-base p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <div>
+                    <h2 className="font-display font-semibold">Monthly Overview</h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">Last 12 months — income vs. spending</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {[{ color: "#10b981", label: "Income" }, { color: "#6366f1", label: "Spent" }].map(s => (
+                      <div key={s.label} className="flex items-center gap-1.5">
+                        <div className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
+                        <span className="text-xs text-muted-foreground">{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={monthlyData} barGap={2} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e3251" />
+                    <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} tickLine={false} axisLine={false} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      formatter={(v: number, name: string) => [formatCurrency(v), name === "income" ? "Income" : "Spent"]}
+                      contentStyle={{ fontSize: 12, borderRadius: 10, border: "1px solid #1e3251", background: "#0d1b2e", color: "#e2e8f0", boxShadow: "0 4px 16px rgba(0,0,0,0.4)" }}
+                      cursor={{ fill: "rgba(30,50,81,0.3)" }}
+                    />
+                    <Bar dataKey="income" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                    <Bar dataKey="spent" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={32} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Monthly table */}
+              <div className="rounded-2xl bg-white border card-base overflow-hidden">
+                <div className="px-5 py-3.5 border-b bg-muted/30">
+                  <h2 className="text-sm font-semibold">Month by Month</h2>
+                </div>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-xs text-muted-foreground">
+                      <th className="px-5 py-3 text-left font-medium">Month</th>
+                      <th className="px-5 py-3 text-right font-medium">Income</th>
+                      <th className="px-5 py-3 text-right font-medium">Spent</th>
+                      <th className="px-5 py-3 text-right font-medium">Net</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {[...monthlyData].reverse().map(m => (
+                      <tr key={m.month} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-5 py-3 font-medium">{m.label}</td>
+                        <td className="px-5 py-3 text-right tabular-nums text-emerald-600 font-semibold">
+                          {m.income > 0 ? formatCurrency(m.income) : "—"}
+                        </td>
+                        <td className="px-5 py-3 text-right tabular-nums font-semibold">{formatCurrency(m.spent)}</td>
+                        <td className={`px-5 py-3 text-right tabular-nums font-semibold ${m.net >= 0 ? "text-emerald-600" : "text-rose-500"}`}>
+                          {m.net >= 0 ? "+" : ""}{formatCurrency(m.net)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Period view (existing) ───────────────────────────────────── */}
+      {!isMonthly && (isLoading ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map(i => <div key={i} className="rounded-2xl bg-white border card-base h-28 animate-pulse" />)}
         </div>
@@ -427,7 +547,7 @@ export default function SpendingPage() {
           </div>
 
         </>
-      )}
+      ))}
 
       {/* Income section — always visible regardless of spending data */}
       <div className="rounded-2xl bg-white border card-base overflow-hidden">
