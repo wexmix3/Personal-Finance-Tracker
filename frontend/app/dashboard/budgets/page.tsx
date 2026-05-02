@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import useSWR from "swr";
 import { Plus, Trash2, AlertTriangle, Target, Bug } from "lucide-react";
 import { apiFetcher, apiPost, apiPatch, apiDelete } from "@/lib/api";
+import { getStoredToken } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
 
@@ -33,11 +34,19 @@ interface DebugData {
   transactions: { id: string; name: string; date: string; amount: number; category: string }[];
 }
 
+async function debugFetcher(path: string): Promise<{ data: Budget[]; debug: DebugData }> {
+  const token = getStoredToken();
+  const res = await fetch(path, token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? "Failed to load");
+  return body;
+}
+
 function BudgetDebugPanel() {
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useSWR<{ data: Budget[]; debug: DebugData }>(
     open ? "/api/budgets?debug=true" : null,
-    apiFetcher
+    debugFetcher
   );
   const debug = data?.debug;
 
