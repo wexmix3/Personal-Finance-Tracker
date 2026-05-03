@@ -6,6 +6,7 @@ import { Pencil, Trash2, Wallet, CreditCard, TrendingUp, Landmark, ArrowLeftRigh
 import { apiFetcher, accountsKey, deleteAccount, updateAccountBalance, apiPost } from "@/lib/api";
 import { AddAccountModal } from "@/components/dashboard/AddAccountModal";
 import { ImportCsvModal } from "@/components/dashboard/ImportCsvModal";
+import { ConnectBankButton } from "@/components/dashboard/ConnectBankButton";
 import { formatCurrency } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { AccountResponse } from "@/types/api";
@@ -166,6 +167,7 @@ export default function AccountsPage() {
           {Array.isArray(accounts) && accounts.length > 0 && (
             <ImportCsvModal accounts={accounts} onSuccess={refresh} />
           )}
+          <ConnectBankButton onSuccess={refresh} />
           <AddAccountModal variant="default" label="Add Account" onSuccess={refresh} />
         </div>
       </div>
@@ -174,8 +176,13 @@ export default function AccountsPage() {
         <EmptyState
           icon={<Wallet size={28} />}
           title="No accounts yet"
-          description="Link your bank accounts, credit cards, and investments to get a complete view of your finances."
-          actionNode={<AddAccountModal label="Add Account" onSuccess={refresh} />}
+          description="Connect your bank automatically via Plaid, or add an account manually."
+          actionNode={
+            <div className="flex flex-wrap gap-2 justify-center">
+              <ConnectBankButton onSuccess={refresh} variant="empty-state" />
+              <AddAccountModal label="Add Manually" onSuccess={refresh} />
+            </div>
+          }
         />
       ) : (
         TYPE_ORDER.filter(t => byType[t].length > 0).map(type => (
